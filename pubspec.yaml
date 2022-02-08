@@ -2,7 +2,7 @@ name: wiredash
 description: Wiredash is an interactive user feedback tool for Flutter apps.
 version: 1.0.0-alpha.4
 homepage: https://wiredash.io
-repository: https://github.com/wiredashio/wiredash-sdk
+repository: https://github.com/MobileUdevs/wiredash-sdk
 
 environment:
   sdk: ">=2.14.0 <3.0.0"

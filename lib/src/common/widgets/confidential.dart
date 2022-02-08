@@ -29,10 +29,9 @@ class Confidential extends StatelessWidget {
     if (!enabled) return child;
 
     return AnimatedBuilder(
-      animation: Wiredash.maybeOf(context)?.visible ??
-          const AlwaysStoppedAnimation(false),
+      animation: Wiredash.of(context)!.visible,
       builder: (_, __) {
-        final isVisible = Wiredash.maybeOf(context)?.visible.value ?? false;
+        final isVisible = Wiredash.of(context)!.visible.value;
         return CustomPaint(
           foregroundPainter: isVisible && mode == ConfidentialMode.black
               ? _PaintItBlack()

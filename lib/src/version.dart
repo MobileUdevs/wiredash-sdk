@@ -12,10 +12,4 @@
 /// 24 -> 0.6.2
 /// 24 -> 0.7.0 (forgot incrementing)
 /// 30 -> 0.7.0+1
-/// 50 -> 0.9.0
-///
-/// 100 -> 1.0.0-alpha.1
-/// 101 -> 1.0.0-alpha.2
-/// 103 -> 1.0.0-alpha.3
-/// 104 -> 1.0.0-alpha.4
-const wiredashSdkVersion = 104;
+const wiredashSdkVersion = 30;

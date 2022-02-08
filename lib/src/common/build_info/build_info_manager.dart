@@ -1,20 +1,18 @@
-import 'package:flutter/foundation.dart';
-import 'package:wiredash/src/common/build_info/build_info.dart';
+import 'package:wiredash/src/common/utils/build_info.dart';
 
 class BuildInfoManager {
-  BuildInfoManager();
+  final BuildInfo buildInfo;
+  BuildInfoManager(this.buildInfo);
 
-  /// Returns the aggregated build info from compile-time env
-  BuildInfo get buildInfo {
-    return BuildInfo(
-      compilationMode: () {
-        if (kDebugMode) return CompilationMode.debug;
-        if (kProfileMode) return CompilationMode.profile;
-        return CompilationMode.release;
-      }(),
-      buildVersion: EnvBuildInfo.buildVersion,
-      buildNumber: EnvBuildInfo.buildNumber,
-      buildCommit: EnvBuildInfo.buildCommit,
-    );
-  }
+  String? get deviceId => buildInfo.deviceId;
+
+  String? _buildVersion;
+  String? get buildVersion => _buildVersion ?? buildInfo.buildVersion;
+  set buildVersion(String? version) => _buildVersion = version;
+
+  String? _buildNumber;
+  String? get buildNumber => _buildNumber ?? buildInfo.buildNumber;
+  set buildNumber(String? number) => _buildNumber = number;
+
+  String? get buildCommit => buildInfo.buildCommit;
 }

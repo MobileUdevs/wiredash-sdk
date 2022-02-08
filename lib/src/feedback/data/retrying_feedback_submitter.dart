@@ -3,17 +3,15 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 
 import 'package:file/file.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:wiredash/src/common/network/wiredash_api.dart';
 import 'package:wiredash/src/common/utils/error_report.dart';
+import 'package:wiredash/src/feedback/data/feedback_item.dart';
 import 'package:wiredash/src/feedback/data/feedback_submitter.dart';
 import 'package:wiredash/src/feedback/data/pending_feedback_item.dart';
 import 'package:wiredash/src/feedback/data/pending_feedback_item_storage.dart';
-import 'package:wiredash/src/feedback/data/persisted_feedback_item.dart';
 
-/// A class that knows how to "eventually send" a [PersistedFeedbackItem]
-/// and an associated screenshot file, retrying appropriately when sending
-/// fails.
+/// A class that knows how to "eventually send" a [FeedbackItem] and an associated
+/// screenshot file, retrying appropriately when sending fails.
 class RetryingFeedbackSubmitter implements FeedbackSubmitter {
   RetryingFeedbackSubmitter(
     this.fs,
@@ -25,8 +23,8 @@ class RetryingFeedbackSubmitter implements FeedbackSubmitter {
   final PendingFeedbackItemStorage _pendingFeedbackItemStorage;
   final WiredashApi _api;
 
-  // Ensures that we're not starting multiple "submitPendingFeedbackItems()"
-  // jobs in parallel.
+  // Ensures that we're not starting multiple "submitPendingFeedbackItems()" jobs
+  // in parallel.
   bool _submitting = false;
 
   // Whether or not "submit()" / "submitPendingFeedbackItems()" was called while
@@ -37,17 +35,17 @@ class RetryingFeedbackSubmitter implements FeedbackSubmitter {
   ///
   /// If sending fails, uses exponential backoff and tries again up to 7 times.
   @override
-  Future<void> submit(PersistedFeedbackItem item, Uint8List? screenshot) async {
+  Future<void> submit(FeedbackItem item, Uint8List? screenshot) async {
     await _pendingFeedbackItemStorage.addPendingItem(item, screenshot);
 
     // Intentionally not "await"-ed. Since we've persisted the pending feedback
-    // item, we can pretty safely assume it's going to be eventually sent, so
-    // the future can complete after persisting the item.
+    // item, we can pretty safely assume it's going to be eventually sent, so the
+    // future can complete after persisting the item.
     submitPendingFeedbackItems();
   }
 
-  /// Checks if there are any pending feedback items stored in persistent
-  /// storage. If there are, tries to send all of them.
+  /// Checks if there are any pending feedback items stored in persistent storage.
+  /// If there are, tries to send all of them.
   ///
   /// Can be called whenever there's a good time to try sending pending feedback
   /// items, such as in "initState()" of the Wiredash widget, or when network
@@ -102,90 +100,50 @@ class RetryingFeedbackSubmitter implements FeedbackSubmitter {
     while (true) {
       attempt++;
       try {
-        // TODO don't upload images again when submission fails
-        final ImageBlob? imageUri = await () async {
-          final screenshotPath = item.screenshotPath;
-          if (screenshotPath != null) {
-            if (await fs.file(screenshotPath).exists()) {
-              final Uint8List screenshot =
-                  await fs.file(screenshotPath).readAsBytes();
-              return _api.sendImage(screenshot);
-            }
-          }
-          return null;
-        }();
-
+        final screenshotPath = item.screenshotPath;
+        final Uint8List? screenshot =
+            screenshotPath != null && await fs.file(screenshotPath).exists()
+                ? await fs.file(screenshotPath).readAsBytes()
+                : null;
         await _api.sendFeedback(
-          item.feedbackItem,
-          images: [
-            if (imageUri != null) imageUri,
-          ],
-        );
+            feedback: item.feedbackItem, screenshot: screenshot);
         // ignore: avoid_print
-        print('Feedback submitted ✌️ ${item.feedbackItem.message}');
+        print("Feedback submitted ✌️ ${item.feedbackItem.message}");
         await _pendingFeedbackItemStorage.clearPendingItem(item.id);
         break;
       } on UnauthenticatedWiredashApiException catch (e, stack) {
         // Project configuration is off, retry at next app start
-        reportWiredashError(
-          e,
-          stack,
-          'Wiredash project configuration is wrong, next retry after '
-          'next app start',
-        );
+        reportWiredashError(e, stack,
+            'Wiredash project configuration is wrong, next retry after next app start');
         break;
       } on WiredashApiException catch (e, stack) {
-        if (e.response?.statusCode == 400) {
-          // The request is invalid. The feedback will never be delivered
+        if (e.message != null &&
+            e.message!.contains("fails because") &&
+            e.message!.contains("is required")) {
+          // some required property is missing. The item will never be delivered
           // to the server, therefore discard it.
-          reportWiredashError(
-            e,
-            stack,
-            'Feedback has missing properties and can not be submitted to '
-            'server. Will be discarded',
-          );
+          reportWiredashError(e, stack,
+              'Feedback has missing properties and can not be submitted to server');
           await _pendingFeedbackItemStorage.clearPendingItem(item.id);
           break;
         }
         reportWiredashError(
-          e,
-          stack,
-          'Wiredash server error. Will retry after app restart',
-        );
+            e, stack, 'Wiredash server error. Will retry after app restart');
         break;
       } catch (e, stack) {
         if (attempt >= _maxAttempts) {
           // Exit after max attempts
           reportWiredashError(
-            e,
-            stack,
-            'Could not send feedback after $attempt retries',
-          );
+              e, stack, 'Could not send feedback after $attempt retries');
           break;
         }
 
         // Report error and retry with exponential backoff
-        reportWiredashError(
-          e,
-          stack,
-          'Could not send feedback to server after $attempt retries. '
-          'Retrying...',
-          debugOnly: true,
-        );
+        reportWiredashError(e, stack,
+            'Could not send feedback to server after $attempt retries. Retrying...',
+            debugOnly: true);
         await Future.delayed(_exponentialBackoff(attempt));
       }
-    }
-  }
-
-  /// Deletes all pending feedback items and their screenshots.
-  Future<void> deletePendingFeedbacks() async {
-    final items = await _pendingFeedbackItemStorage.retrieveAllPendingItems();
-    if (items.isEmpty) {
-      debugPrint('No pending feedbacks');
-    }
-    for (final item in items) {
-      await _pendingFeedbackItemStorage.clearPendingItem(item.id);
-      debugPrint("deleted Feedback ${item.id} '${item.feedbackItem.message}'");
     }
   }
 }
