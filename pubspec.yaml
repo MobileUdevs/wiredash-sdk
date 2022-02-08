@@ -9,7 +9,6 @@ environment:
   flutter: ">=2.8.0"
 
 dependencies:
-  collection: ">=1.15.0 <2.0.0"
   file: ">=6.0.0-0 <7.0.0"
   flutter:
     sdk: flutter
@@ -27,7 +26,6 @@ dev_dependencies:
   lint: ^1.5.0
   test: ^1.16.0-nullsafety
   transparent_image: ^2.0.0-nullsafety.0
-
 
 flutter:
   assets:
@@ -48,13 +46,11 @@ flutter:
         default_package: wiredash
       web:
         default_package: wiredash
-      windows:
-        default_package: wiredash
 
   fonts:
-    - family: Inter
+    - family: LexendDeca
       fonts:
         - asset: lib/assets/fonts/LexendDeca-Regular.ttf
-    - family: Wirecons
+    - family: wiredash-icons
       fonts:
-        - asset: lib/assets/fonts/Wirecons.ttf
+        - asset: lib/assets/fonts/Wiredash-Icons.ttf
