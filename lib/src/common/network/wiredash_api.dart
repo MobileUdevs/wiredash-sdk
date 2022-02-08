@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui';
 
+import 'package:flutter/cupertino.dart';
 import 'package:http/http.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:wiredash/src/common/utils/error_report.dart';
@@ -98,6 +99,12 @@ class WiredashApi {
     request.headers['version'] = wiredashSdkVersion.toString();
 
     final streamedResponse = await _httpClient.send(request);
+    debugPrint("wiredash :");
+    debugPrint(request.headers.toString());
+    debugPrint(request.url.toString());
+    debugPrint(request.toString());
+    debugPrint("wiredash : --");
+    debugPrint(Response.fromStream(streamedResponse).toString());
     return Response.fromStream(streamedResponse);
   }
 }
