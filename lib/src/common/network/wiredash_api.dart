@@ -34,10 +34,21 @@ class WiredashApi {
     final uri = Uri.parse('$_host/feedback');
     final arguments = feedback.toMultipartFormFields()
       ..removeWhere((key, value) => value == null || value.isEmpty);
+    debugPrint("feedback: ");
+    debugPrint(arguments.toString());
     final argumentsNN = arguments.map((key, value) => MapEntry(key, value!));
 
     final BaseRequest request = () {
       if (screenshot != null) {
+        debugPrint(argumentsNN.toString());
+        debugPrint(
+          MultipartFile.fromBytes(
+            'file',
+            screenshot,
+            filename: 'file',
+            contentType: MediaType('image', 'png'),
+          ).toString(),
+        );
         return MultipartRequest('POST', uri)
           ..fields.addAll(argumentsNN)
           ..files.add(
